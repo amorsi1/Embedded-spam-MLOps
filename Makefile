@@ -1,11 +1,12 @@
 # MLOps Spam Classifier Makefile
 # Usage: make <target>
 
-.PHONY: help up down build test-api test-health test-spam test-ham evaluate-response clean logs test-s3-integration test-pipeline
+.PHONY: help download_data up down build test-api test-health test-spam test-ham evaluate-response clean logs test-s3-integration test-pipeline
 
 # Default target
 help:
 	@echo "Available targets:"
+	@echo "  download_data         - Download and preprocesses data from Kaggle"
 	@echo "  up                    - Start all services with docker-compose"
 	@echo "  down                  - Stop all services"
 	@echo "  build                 - Build all Docker images"
@@ -18,6 +19,9 @@ help:
 	@echo "  evaluate-response     - Evaluate if API is responding correctly"
 	@echo "  logs                  - Show logs from all services"
 	@echo "  clean                 - Clean up Docker resources"
+
+download_data:
+	pipenv run python src/download_and_preprocess.py
 
 # Docker Compose targets
 up:
