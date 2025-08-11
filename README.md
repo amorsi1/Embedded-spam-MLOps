@@ -16,13 +16,14 @@ whether or not it's spam.
 <img width="2400" height="1148" alt="MLOps spam_ham architecture" src="https://github.com/user-attachments/assets/a660a559-7d8c-42ee-a1a8-4de40d811a58" />
 
 ## Installation instructions
-Clone the repo and install dependencies
+Clone the repo and install python packages
 ```
 git clone https://github.com/amorsi1/MLOps_spam_classifier
 pip install pipenv
-cd MLOps_spam_classifier.git
-pipenv install 
+cd Embedded-spam-MLOps
+pipenv install --dev
 ```
+
 a `.env` file is used to centralize environmental variables, before running any code locally make sure to create this file and populate it with the following variables:
 ```.env
 MLFLOW_TRACKING_URI=http://mlflow-server:8080 
@@ -30,8 +31,11 @@ MLFLOW_EXPERIMENT_NAME=spam-classifier
 MLFLOW_MODEL_NAME=lr-model
 EMBEDDING_MODEL_NAME=all-MiniLM-L6-v2
 ```
-With that set, you can run the training container, mlflow server container, and webapp container using docker compose:
+
+With that set, you can download and preprocess the kaggle data, then run the training container, mlflow server container, and webapp container using docker-compose:
+NOTE: data preprocessing will take 20-30 mins on an average laptop since it is front-loading all of the text embedding. Fortunately, you will only need to do this once.
 ```bash
+make download_data
 docker-compose up --build
 ```
 
