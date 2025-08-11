@@ -13,11 +13,10 @@ WORKDIR /mlflow
 EXPOSE 8080
 
 # Start MLflow server with file-based backend for simplicity
-# In production, you'd typically use a proper database
-CMD ["mlflow", "server", \
-     "--host", "0.0.0.0", \
-     "--port", "8080", \
-     "--default-artifact-root", "s3://am-mlflow-backend", \
-     "--backend-store-uri", "sqlite:///mlflow.db", \
-     "--artifacts-destination", "s3://am-mlflow-backend"] 
+CMD ["sh", "-c", "mlflow server \
+     --host 0.0.0.0 \
+     --port 8080 \
+     --default-artifact-root ${ARTIFACT_ROOT} \
+     --backend-store-uri sqlite:///mlflow.db \
+     --artifacts-destination ${ARTIFACT_ROOT}"] 
 #artifacts-destination argument probably unnecessary

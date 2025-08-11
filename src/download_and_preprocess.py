@@ -7,6 +7,7 @@ import pandas as pd
 from sentence_transformers import SentenceTransformer
 from typing import List
 from dotenv import load_dotenv
+import argparse
 
 load_dotenv()  # Load environment variables from .env file
 
@@ -15,7 +16,8 @@ EMBEDDING_MODEL_NAME = os.getenv('EMBEDDING_MODEL_NAME', 'all-MiniLM-L6-v2')
 def download_phishing_dataset(
     output_dir="data", 
     filename="raw-phishing-email-dataset.zip",
-    chunk_size=8192
+    chunk_size=8192,
+    overwrite=False
 ):
     """
     Download the phishing email dataset with progress bar.
@@ -43,6 +45,20 @@ def download_phishing_dataset(
     
     # Get file size for progress bar
     total_size = int(response.headers.get('content-length', 0))
+
+    #check if file already exists and size matches
+    if file_path.exists() and file_path.stat().st_size == total_size:
+        print(f'File {file_path} already exists')
+        if not overwrite:
+            print('Skipping download... \n to overwrite, use --overwrite flag')
+            return {
+        'path': str(file_path),
+        'size_bytes': file_path.stat().st_size,
+        'size_mb': file_path.stat().st_size / (1024 * 1024),
+        'exists': file_path.exists()
+    }
+        if overwrite:
+            print('Overwriting existing file...')
     
     # Download with progress bar
     with open(file_path, 'wb') as f, tqdm(
@@ -80,7 +96,8 @@ def embed_df_text(df, text_column='body', embedding_model=EMBEDDING_MODEL_NAME):
     """
     # Example: df['embedding'] = df[text_column].apply(lambda x: some_embedding_function(x))
     model = SentenceTransformer(embedding_model)
-    df['embedding'] = df[text_column].apply(lambda x: model.encode(str(x)))
+    tqdm.pandas(desc=f"Embedding {text_column}")
+    df['embedding'] = df[text_column].progress_apply(lambda x: model.encode(str(x)))
     # print('Embedding dtype:', type(df['embedding'][0]))
     return df
 
@@ -92,7 +109,14 @@ def combine_dfs_and_shuffle(dfs: List[pd.DataFrame]):
 def process_downloaded_files(input_dir,
                              interim_dir='data/interim',
                              processed_dir = 'data/processed',
-                             files_to_use=None):
+                             files_to_use=None,
+                             output_filename='combined_spam_ham_dataset.pkl',
+                             overwrite=False):
+    
+    combined_output_path = f'{processed_dir}/{output_filename}'
+    if os.path.exists(combined_output_path) and not overwrite:
+        print(f'File {combined_output_path} already exists, skipping processing...')
+        return
     dfs = []
     for file in tqdm(os.listdir(input_dir)):
         if files_to_use and file not in files_to_use:
@@ -109,14 +133,32 @@ def process_downloaded_files(input_dir,
             df.to_pickle(output_path)
             dfs.append(df)
     combined = combine_dfs_and_shuffle(dfs)
-    combined.to_pickle(f'{processed_dir}/combined_spam_ham_dataset.pkl')
+    combined.to_pickle(combined_output_path)
 
+
+def parse_args():
+    parser = argparse.ArgumentParser(description="Download and preprocess phishing email dataset")
+    parser.add_argument(
+        '--files-to-use', 
+        nargs='+', 
+        default=['CEAS_08.csv', 'SpamAssasin.csv'],
+        help='List of CSV files to process (default: CEAS_08.csv SpamAssasin.csv)'
+    )
+    parser.add_argument(
+        '--overwrite', 
+        action='store_true',
+        default=False,
+        help='Overwrite existing files (default: False)'
+    )
+    return parser.parse_args()
 
 def main():
-    # result = download_phishing_dataset_with_progress("data/raw")
-    process_downloaded_files('data/raw', files_to_use=['CEAS_08.csv','SpamAssasin.csv'])
-    # print(f"Downloaded: {result['path']}")
-    # print(f"Size: {result['size_mb']:.2f} MB")
+    #loads in CLI args, with defaults values already defined if not provided
+    args = parse_args()
+    result = download_phishing_dataset("data/raw", overwrite=args.overwrite)
+    process_downloaded_files('data/raw',
+                              files_to_use=args.files_to_use, 
+                              overwrite=args.overwrite)
 
 if __name__ == "__main__":
     main()
